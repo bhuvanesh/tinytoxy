@@ -23,6 +23,13 @@ func initProxy() {
 	//Accept a blocking call
 	for {
 
+		upstreamLink := &Link{
+			ch: make(chan []byte),
+		}
+		downstreamLink := &Link{
+			ch: make(chan []byte),
+		}
+
 		downstreamConn, err := listener.Accept()
 		if err != nil {
 			log.Fatal("Error: ", err)
@@ -35,11 +42,37 @@ func initProxy() {
 			}
 			defer upstreamConn.Close()
 			// downstreamConn.Write([]byte("Hello from TINY TOXY\n"))
-			go io.Copy(upstreamConn, downstreamConn)
-			io.Copy(downstreamConn, upstreamConn)
+			go io.Copy(upstreamLink, downstreamConn)
+			go io.Copy(upstreamConn, upstreamLink)
+			go io.Copy(downstreamLink, upstreamConn)
+			io.Copy(downstreamConn, downstreamLink)
+			// go io.Copy(upstreamConn, downstreamConn)
+			// io.Copy(downstreamConn, upstreamConn)
 
 		}(downstreamConn)
 
 	}
 
+}
+
+type Link struct {
+	ch chan []byte
+}
+
+// Read reads data from the connection.
+// Read can be made to time out and return an error after a fixed
+// time limit; see SetDeadline and SetReadDeadline.
+func (l *Link) Read(b []byte) (int, error) {
+	// b = <- l.ch
+	data := <-l.ch
+	copy(b, data)
+	return len(b), nil
+}
+
+// Write writes data to the connection.
+// Write can be made to time out and return an error after a fixed
+// time limit; see SetDeadline and SetWriteDeadline.
+func (l *Link) Write(b []byte) (int, error) {
+	l.ch <- b
+	return len(b), nil
 }
