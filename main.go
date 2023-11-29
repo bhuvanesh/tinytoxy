@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 )
 
 func main() {
@@ -24,10 +25,12 @@ func initProxy() {
 	for {
 
 		upstreamLink := &Link{
-			ch: make(chan []byte),
+			ch:      make(chan []byte),
+			latency: time.Second,
 		}
 		downstreamLink := &Link{
-			ch: make(chan []byte),
+			ch:      make(chan []byte),
+			latency: time.Second,
 		}
 
 		downstreamConn, err := listener.Accept()
@@ -56,7 +59,8 @@ func initProxy() {
 }
 
 type Link struct {
-	ch chan []byte
+	ch      chan []byte
+	latency time.Duration
 }
 
 // Read reads data from the connection.
@@ -65,6 +69,7 @@ type Link struct {
 func (l *Link) Read(b []byte) (int, error) {
 	// b = <- l.ch
 	data := <-l.ch
+	time.Sleep(l.latency)
 	copy(b, data)
 	return len(b), nil
 }
