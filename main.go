@@ -18,10 +18,15 @@ func initProxy() {
 	}
 	defer listener.Close()
 	//Accept a blocking call
-	downstreamConn, err := listener.Accept()
-	if err != nil {
-		log.Fatal("Error: ", err)
+	for {
+		downstreamConn, err := listener.Accept()
+		if err != nil {
+			log.Fatal("Error: ", err)
+		}
+		go func(downstreamConn net.Conn) {
+			defer downstreamConn.Close()
+			downstreamConn.Write([]byte("Hello from TINY TOXY\n"))
+		}(downstreamConn)
 	}
-	defer downstreamConn.Close()
-	downstreamConn.Write([]byte("Hello from TINY TOXY\n"))
+
 }
